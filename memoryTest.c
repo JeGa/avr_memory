@@ -8,7 +8,7 @@ int main(void)
 	mem1 = (char *) allocateMemory(9);
 	info1 = dumpMemory();
 	
-	mem2 = (char *) allocateMemory(10);
+	mem2 = (char *) allocateMemory(9);
 	info2 = dumpMemory();
 	
 	freeMemory(mem1);

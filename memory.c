@@ -1,11 +1,17 @@
+/**
+ * @file memory.c
+ */
+
 #include "memory.h"
+#include <avr/io.h>
 
 // Defined from linker script
 extern char __heap_start;
 
 char *heapStart = &__heap_start;
 char *nextFreeMemory;
-// TODO: char margin = 128;
+// This ensures that there is no collision with the stack.
+char margin = 128;
 
 struct memoryArea;
 
@@ -21,9 +27,6 @@ memoryArea *freeListEnd;
 // Prototypes
 void *checkFreeList(uint8_t size);
 
-/**
- * @param size Number of bytes to allocate (max is 256)
- */
 void *allocateMemory(uint8_t size)
 {
 	memoryArea *newMemoryArea;
@@ -36,14 +39,16 @@ void *allocateMemory(uint8_t size)
 	if (nextFreeMemory == 0)
 		nextFreeMemory = heapStart;
 	
-	// Check collision with stack.
-	// TODO: Margin if ()
-	
 	memoryFromFreeList = checkFreeList(size);
 	if (memoryFromFreeList)
 		return memoryFromFreeList;
 		
 	// No memory from free list available, get new memory.
+	
+	// Check collision with stack.
+	if ((nextFreeMemory + size + sizeof(uint8_t)) >= (SP - margin))
+		return 0;
+	
 	newMemoryArea = (memoryArea *) nextFreeMemory;
 	newMemoryArea->size = size;
 	
@@ -151,13 +156,12 @@ void *checkFreeList(uint8_t size)
 		if (iterator == bestFittingMemoryArea) {
 			i->next = iterator->next;
 			
-			// if its the last element in the list, 
+			// if its the last element in the list, set the correct freeListEnd pointer.
 			if (iterator == freeListEnd)
 				freeListEnd = i;
 			
 			break;
 		}
-
 	}
 	
 	bestFittingMemoryArea->next = 0;
