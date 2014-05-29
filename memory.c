@@ -46,7 +46,7 @@ void *allocateMemory(uint8_t size)
 	// No memory from free list available, get new memory.
 	
 	// Check collision with stack.
-	if ((nextFreeMemory + size + sizeof(uint8_t)) >= (SP - margin))
+	if ((nextFreeMemory + size + sizeof(uint8_t)) >= (char *) (SP - margin))
 		return 0;
 	
 	newMemoryArea = (memoryArea *) nextFreeMemory;
@@ -82,10 +82,12 @@ memoryInfo dumpMemory()
 	info.heapStart = heapStart;
 	info.nextFreeMemory = nextFreeMemory;
 	
-	info.heapAllocated = (char *) (nextFreeMemory - heapStart);
+	if (nextFreeMemory == 0)
+		info.heapAllocated = 0;
+	else
+		info.heapAllocated = (int) (nextFreeMemory - heapStart);
 	
-	if (freeListStart == 0)
-		info.freeListEntries = 0;
+	info.freeListEntries = 0;
 		
 	for (iterator = freeListStart; iterator != 0; iterator = iterator->next) {
 		info.heapAllocated -= (iterator->size + sizeof(uint8_t)); // + size variable

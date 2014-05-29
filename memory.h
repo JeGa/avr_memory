@@ -9,18 +9,22 @@
  * free list, it is returned. Otherwise, a new memory block is allocated.
  */
 
+#pragma once
+
 #include <stdint.h>
 
 typedef struct
 {
 	char *heapStart;
-	char *heapAllocated;
 	char *nextFreeMemory;
+	int heapAllocated;
 	int freeListEntries;
 } memoryInfo;
 
 /**
  * @param size Number of bytes to allocate (max is 256)
+ *
+ * @retval 0 Error allocating memory
  */
 void *allocateMemory(uint8_t size);
 
