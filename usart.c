@@ -101,13 +101,15 @@ static void send()
 	if (isMessageQueueEmpty(txQueue))
 		USART.CTRLA = (USART.CTRLA & ~USART_DREINTLVL_gm) | USART_DREINTLVL_OFF_gc;
 	else {
+		char d;
 		// Transmit msg from send buffer
 		
 		if (currentMessage == 0)
 			currentMessage = dequeue(txQueue);
-			
+		
 		// Send one byte from current message
-		USART.DATA = popMessageData(currentMessage);
+		d = popMessageData(currentMessage);
+		USART.DATA = d;
 		
 		// If message has no data left destroy it
 		if (isMessageStackEmpty(currentMessage)) {

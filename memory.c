@@ -34,7 +34,7 @@ void *allocateMemory(uint8_t size)
 	
 	// Size has to be at least the size of the pointer.
 	if (size < sizeof(memoryArea*))
-		return 0;
+		size = sizeof(memoryArea*);
 	
 	if (nextFreeMemory == 0)
 		nextFreeMemory = heapStart;

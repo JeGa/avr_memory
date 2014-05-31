@@ -78,16 +78,14 @@ void doBufferTest()
 
 int main(void)
 {
-	volatile char *data = "Hello\r\n";
-	
+	char *data = "Hallo\r\n";
+
 	init32MHzClock();
 	initUsart();
 
 	while (1) {
-		message *msg = getMessage(8);
-		setMessageData(msg, data, 8);
+		message *msg = getMessage(7);
+		setMessageData(msg, data, 7);
 		sendMessageUsart(msg);
-		
-		_delay_ms(1000);
 	}
 }
