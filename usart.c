@@ -10,7 +10,15 @@ static messageQueue *txQueue;
  * via serial, this pointer is used to point to
  * the current message that should be send.
  */
-static message *currentMessage;
+static message *currentSendMessage;
+
+/**
+ * Because you can receive only one byte at once
+ * via serial, this pointer is used to point to
+ * the current receiving message (which is data
+ * until a newline).
+ */
+static message *currentReceiveMessage;
 
 int initUsart()
 {
@@ -22,7 +30,8 @@ int initUsart()
 	if (txQueue == 0)
 		return 0;
 		
-	currentMessage = 0;
+	currentSendMessage = 0;
+	currentReceiveMessage = 0;
 	
 	USART_PORT.OUTSET = PIN3_bm;
 	
@@ -80,7 +89,9 @@ message *receiveMessageUsart()
  */
 static void receive()
 {
-	message *msg = getMessage(2);
+	message *msgSendBack;
+	message *msg = getMessage(1);
+	
 	if (msg == 0)
 		return;
 	
@@ -88,6 +99,10 @@ static void receive()
 	
 	setMessageData(msg, &data, 1);
 	enqueue(rxQueue, msg);
+	
+	// Send copy back to user
+	msgSendBack = copyMessage(msg);
+	sendMessageUsart(msgSendBack);
 }
 
 /**
@@ -101,20 +116,21 @@ static void send()
 	if (isMessageQueueEmpty(txQueue))
 		USART.CTRLA = (USART.CTRLA & ~USART_DREINTLVL_gm) | USART_DREINTLVL_OFF_gc;
 	else {
-		char d;
+		char data;
+		
 		// Transmit msg from send buffer
 		
-		if (currentMessage == 0)
-			currentMessage = dequeue(txQueue);
+		if (currentSendMessage == 0)
+			currentSendMessage = dequeue(txQueue);
 		
 		// Send one byte from current message
-		d = popMessageData(currentMessage);
-		USART.DATA = d;
+		data = popMessageData(currentSendMessage);
+		USART.DATA = data;
 		
 		// If message has no data left destroy it
-		if (isMessageStackEmpty(currentMessage)) {
-			destroyMessage(currentMessage);	
-			currentMessage = 0;
+		if (isMessageStackEmpty(currentSendMessage)) {
+			destroyMessage(currentSendMessage);	
+			currentSendMessage = 0;
 		}
 	}
 }

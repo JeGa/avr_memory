@@ -21,6 +21,8 @@
 typedef struct message message;
 typedef struct messageQueue messageQueue;
 
+// TODO: Put struc declaration in source file
+
 struct message
 {
 	char *data;
@@ -52,6 +54,9 @@ message *getMessage(int dataSize);
 
 void destroyMessage(message *msg);
 
+/**
+ * Copies the data.
+ */
 int setMessageData(message *msg, char *data, int size);
 
 char *getMessageData(message *msg);
@@ -64,6 +69,8 @@ char *getMessageData(message *msg);
  */
 char popMessageData(message *msg);
 char isMessageStackEmpty(message *msg);
+
+message *copyMessage(message *msg);
 
 /**
  * @retval 0 Error creating new message queue.

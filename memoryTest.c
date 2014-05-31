@@ -1,6 +1,7 @@
 #include "memory.h"
 #include "usart_buffer.h"
 #include "usart.h"
+#include "shell.h"
 
 #include <util/delay.h>
 
@@ -81,11 +82,6 @@ int main(void)
 	char *data = "Hallo\r\n";
 
 	init32MHzClock();
-	initUsart();
-
-	while (1) {
-		message *msg = getMessage(7);
-		setMessageData(msg, data, 7);
-		sendMessageUsart(msg);
-	}
+	
+	shellTask();
 }

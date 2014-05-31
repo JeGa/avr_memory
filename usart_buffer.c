@@ -88,6 +88,22 @@ char isMessageStackEmpty(message *msg)
 	return 0;
 }
 
+message *copyMessage(message *msg)
+{
+	message *newMsg;
+	
+	if (msg == 0)
+		return 0;
+		
+	newMsg = getMessage(msg->size);
+	if (newMsg == 0)
+		return 0;
+	
+	setMessageData(newMsg, getMessageData(msg), msg->size);
+	
+	return newMsg;
+}
+
 // MessageQueue
 
 messageQueue *getMessageQueue()
