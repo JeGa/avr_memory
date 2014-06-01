@@ -18,7 +18,8 @@ static message *currentSendMessage;
  * the current receiving message (which is data
  * until a newline).
  */
-static message *currentReceiveMessage;
+#define MAX_RECEIVE_MSG_SIZE 20
+static message *currentReceiveMessage; // TODO
 
 int initUsart()
 {
@@ -83,24 +84,38 @@ message *receiveMessageUsart()
 /**
  * Is called from the receive ISR.
  *
- * It copies the received byte into a message
- * and puts the message into the receive queue.
+ * It copies the received byte into a message.
+ * If the MAX_RECEIVE_MSG_SIZE is reached or if a new line is recognized,
+ * the message is put into the receive queue.
  */
+
+// TODO
 static void receive()
 {
 	message *msgSendBack;
-	message *msg = getMessage(1);
+	char data;
 	
-	if (msg == 0)
-		return;
+	if (currentReceiveMessage == 0) {
+		currentReceiveMessage = getMessage(MAX_RECEIVE_MSG_SIZE);
+		
+		if (currentReceiveMessage == 0)
+			return;
+	}
 	
-	char data = USART.DATA;
+	data = USART.DATA;
 	
-	setMessageData(msg, &data, 1);
-	enqueue(rxQueue, msg);
+	pushMessageData(currentReceiveMessage, data);
 	
-	// Send copy back to user
-	msgSendBack = copyMessage(msg);
+	if (isMessageStackFull(currentReceiveMessage)) {
+		enqueue(rxQueue, currentReceiveMessage);
+		currentReceiveMessage = 0;
+	} else if (data == '\r') { // New line
+		
+	}
+	
+	// TODO: Send copy back
+	msgSendBack = getMessage(1);
+	setMessageData(msgSendBack, &data, 1);
 	sendMessageUsart(msgSendBack);
 }
 

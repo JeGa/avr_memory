@@ -25,7 +25,7 @@ message *getMessage(int dataSize)
 	}
 	
 	msg->size = dataSize;
-	msg->stackIndex = 0;
+	msg->stackIndex = 0; // TODO Put this to another struct
 	msg->next = 0;
 	
 	return msg;
@@ -63,6 +63,7 @@ char *getMessageData(message *msg)
 	return msg->data;
 }
 
+// TODO: Put this to another file
 char popMessageData(message *msg)
 {
 	if (msg == 0)
@@ -77,6 +78,22 @@ char popMessageData(message *msg)
 	return data;
 }
 
+// TODO: Put this to another file
+char pushMessageData(message *msg, char data)
+{
+	if (msg == 0)
+		return 0;
+		
+	if (msg->stackIndex == msg->size)
+		return 0; // "Full"
+		
+	msg->data[msg->stackIndex] = data;
+	++msg->stackIndex;
+	
+	return 1;
+}
+
+// TODO: Put this to another file
 char isMessageStackEmpty(message *msg)
 {
 	if (msg == 0)
@@ -84,6 +101,18 @@ char isMessageStackEmpty(message *msg)
 		
 	if (msg->stackIndex == msg->size)
 		return 1; // "Empty"
+		
+	return 0;
+}
+
+// TODO: Put this to another file
+char isMessageStackFull(message *msg)
+{
+	if (msg == 0)
+		return 0;
+		
+	if (msg->stackIndex == msg->size)
+		return 1; // "Full"
 		
 	return 0;
 }

@@ -21,7 +21,7 @@
 typedef struct message message;
 typedef struct messageQueue messageQueue;
 
-// TODO: Put struc declaration in source file
+// TODO: Put struct declaration in source file
 
 struct message
 {
@@ -33,7 +33,7 @@ struct message
 	 * For example to use it easier in serial communication, where only one
 	 * byte can be send at once.
 	 */	
-	int stackIndex; // Pseudo-size
+	int stackIndex;
 	
 	message *next;
 };
@@ -46,6 +46,8 @@ struct messageQueue
 };
 
 /**
+ * Allocate memory for a new message.
+ *
  * @param dataSize Size of the message data part
  *
  * @retval 0 Error creating new message queue
@@ -56,9 +58,23 @@ void destroyMessage(message *msg);
 
 /**
  * Copies the data.
+ *
+ * @retval 0 Error setting the data of the message.
  */
 int setMessageData(message *msg, char *data, int size);
 
+/**
+ * Returns a copy of the messages data.
+ *
+ * @param data Pointer to the copied message data
+ * @param size Size of the data
+ *
+ * @retval 0 Error getting the data of the message.
+ */
+// TODO
+/**
+ * Returns a pointer to the messages data.
+ */
 char *getMessageData(message *msg);
 
 /**
@@ -68,11 +84,18 @@ char *getMessageData(message *msg);
  * (So it can still be accessed).
  */
 char popMessageData(message *msg);
+
+char pushMessageData(message *msg, char data);
+
 char isMessageStackEmpty(message *msg);
+
+char isMessageStackFull(message *msg);
 
 message *copyMessage(message *msg);
 
 /**
+ * Allocate memory for a new message queue.
+ *
  * @retval 0 Error creating new message queue.
  */
 messageQueue *getMessageQueue();
