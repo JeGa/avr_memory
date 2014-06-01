@@ -22,8 +22,13 @@
  */
 #define BSEL ((uint8_t) (F_CPU / (16 * BAUDRATE)) - 1)
 
+/**
+ * During initialization, global interrupts should be disabled.
+ */
 int initUsart();
+
 void stopUsart();
 
 void sendMessageUsart(message *msg);
+
 message *receiveMessageUsart();

@@ -69,7 +69,6 @@ void stopUsart()
 
 void sendMessageUsart(message *msg)
 {
-	// TODO: Check size (has to be 1 byte at the moment)
 	enqueue(txQueue, msg);
 	
 	// Enable DRE IR
@@ -113,7 +112,7 @@ static void receive()
 static void send()
 {
 	// Disable DRE IR if buffer is empty.
-	if (isMessageQueueEmpty(txQueue))
+	if (isMessageQueueEmpty(txQueue) && currentSendMessage == 0)
 		USART.CTRLA = (USART.CTRLA & ~USART_DREINTLVL_gm) | USART_DREINTLVL_OFF_gc;
 	else {
 		char data;

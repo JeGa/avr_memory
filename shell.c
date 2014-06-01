@@ -10,6 +10,14 @@ static void printString(char *string);
 static void printHeader();
 static void printNewLine();
 
+void delay(int t)
+{
+	int i = 0;
+	for (i = 0; i < t; ++i) {
+		_delay_ms(1);
+	}
+}
+
 void shellTask()
 {
 	initLED();
@@ -19,6 +27,7 @@ void shellTask()
 		message *msg;
 		int running = 1;
 		
+		printNewLine();
 		printHeader();
 		
 		while (running) {
@@ -35,10 +44,8 @@ void shellTask()
 				destroyMessage(msg);
 			}
 
-			//_delay_ms(1000);
+			//delay(1000);
 		}
-		
-		printNewLine();
 	}
 	
 	stopUsart();
