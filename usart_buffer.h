@@ -21,6 +21,11 @@
 typedef struct message message;
 typedef struct messageQueue messageQueue;
 
+typedef enum {
+	TX_MSG,
+	RX_MSG	
+} MSG_TYPE;
+
 // TODO: Put struct declaration in source file
 
 struct message
@@ -29,11 +34,14 @@ struct message
 	int size;
 
 	/**
-	 * Used if the user wants to use the message data as a read-only stack.
+	 * Used if the user wants to use the message data as a stack.
 	 * For example to use it easier in serial communication, where only one
-	 * byte can be send at once.
+	 * byte can be send / received at once.
+	 *
+	 * The stack access (read or write) depends on the message type.
 	 */	
 	int stackIndex;
+	MSG_TYPE type;
 	
 	message *next;
 };
@@ -49,10 +57,11 @@ struct messageQueue
  * Allocate memory for a new message.
  *
  * @param dataSize Size of the message data part
+ * @param type Defines the stack access possibilities.
  *
  * @retval 0 Error creating new message queue
  */
-message *getMessage(int dataSize);
+message *getMessage(int dataSize, MSG_TYPE type);
 
 void destroyMessage(message *msg);
 
@@ -66,14 +75,17 @@ int setMessageData(message *msg, char *data, int size);
 /**
  * Returns a copy of the messages data.
  *
- * @param data Pointer to the copied message data
+ * @param data Address of the pointer to the copied message data
  * @param size Size of the data
  *
  * @retval 0 Error getting the data of the message.
  */
-// TODO
+char getMessageDataCopy(message *msg, char **data, int *size);
+
 /**
  * Returns a pointer to the messages data.
+ *
+ * @retval 0 Error getting pointer to data.
  */
 char *getMessageData(message *msg);
 

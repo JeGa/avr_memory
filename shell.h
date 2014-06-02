@@ -14,16 +14,3 @@
  * This task can be scheduled.
  */
 void shellTask();
-
-/**
- * Prints the given (null terminated) string to the serial console.
- * The string data is copied.
- */
-void print(char *string);
-
-/**
- * Reads a line from the serial console (more precise, from the buffer).
- */
-char read();
-
-//int byteToString(uint8_t byte, char *string);

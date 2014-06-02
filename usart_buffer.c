@@ -5,7 +5,7 @@
 
 // Message
 
-message *getMessage(int dataSize)
+message *getMessage(int dataSize, MSG_TYPE type)
 {
 	message *msg;
 	
@@ -25,7 +25,8 @@ message *getMessage(int dataSize)
 	}
 	
 	msg->size = dataSize;
-	msg->stackIndex = 0; // TODO Put this to another struct
+	msg->stackIndex = 0;
+	msg->type = type;
 	msg->next = 0;
 	
 	return msg;
@@ -55,6 +56,17 @@ int setMessageData(message *msg, char *data, int size)
 	return 1;
 }
 
+char getMessageDataCopy(message *msg, char **data, int *size)
+{
+	if (msg == 0)
+		return 0;
+	
+	*size = msg->size;
+	memcpy(*data, msg->data, msg->size);
+	
+	return 1;
+}
+
 char *getMessageData(message *msg)
 {
 	if (msg == 0)
@@ -63,10 +75,12 @@ char *getMessageData(message *msg)
 	return msg->data;
 }
 
-// TODO: Put this to another file
 char popMessageData(message *msg)
 {
 	if (msg == 0)
+		return 0;
+
+	if (msg->type != TX_MSG)
 		return 0;
 	
 	if (msg->stackIndex == msg->size)
@@ -78,10 +92,26 @@ char popMessageData(message *msg)
 	return data;
 }
 
-// TODO: Put this to another file
+char isMessageStackEmpty(message *msg)
+{
+	if (msg == 0)
+	return 0;
+	
+	if (msg->type != TX_MSG)
+		return 0;
+	
+	if (msg->stackIndex == msg->size)
+	return 1; // "Empty"
+	
+	return 0;
+}
+
 char pushMessageData(message *msg, char data)
 {
 	if (msg == 0)
+		return 0;
+		
+	if (msg->type != RX_MSG)
 		return 0;
 		
 	if (msg->stackIndex == msg->size)
@@ -93,22 +123,12 @@ char pushMessageData(message *msg, char data)
 	return 1;
 }
 
-// TODO: Put this to another file
-char isMessageStackEmpty(message *msg)
+char isMessageStackFull(message *msg)
 {
 	if (msg == 0)
 		return 0;
 		
-	if (msg->stackIndex == msg->size)
-		return 1; // "Empty"
-		
-	return 0;
-}
-
-// TODO: Put this to another file
-char isMessageStackFull(message *msg)
-{
-	if (msg == 0)
+	if (msg->type != RX_MSG)
 		return 0;
 		
 	if (msg->stackIndex == msg->size)
@@ -124,7 +144,7 @@ message *copyMessage(message *msg)
 	if (msg == 0)
 		return 0;
 		
-	newMsg = getMessage(msg->size);
+	newMsg = getMessage(msg->size, msg->type);
 	if (newMsg == 0)
 		return 0;
 	

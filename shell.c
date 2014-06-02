@@ -2,6 +2,7 @@
 #include "usart.h"
 #include "usart_buffer.h"
 
+#include <string.h>
 #include "jefax_xmega128.h"
 
 static void printString(char *string);
@@ -14,11 +15,12 @@ void shellTask()
 	initLED();
 	initUsart();
 	
+	printNewLine();
+	
 	while (1) {
 		message *msg;
 		int running = 1;
 		
-		printNewLine();
 		printHeader();
 		
 		while (running) {
@@ -31,50 +33,29 @@ void shellTask()
 	stopUsart();
 }
 
-void print(char *string)
-{
-	printHeader();
-	printString(string);
-}
-
-// TODO
-char read()
-{
-	char ret;
-		
-	return ret;
-}
-
 // TODO
 static int parseMessage(message *msg)
 {
-
-}
-
-static void printString(char *string)
-{
-	message *msg;
-	int stringSize = 0;
-	
-	// Count string size
-	while (string[stringSize])
-		++stringSize;
-			
-	if (stringSize == 0)
-		return;
+	if (msg == 0)
+		return 1;
 		
-	msg = getMessage(stringSize);
-	setMessageData(msg, string, stringSize);
+	char *data = getMessageData(msg);
 	
-	sendMessageUsart(msg);
+	if (strcmp("ledOn", data) == 0) {
+		setLED(0XFE);
+	} else if (strcmp("ledOff", data) == 0) {
+		setLED(0xFF);
+	}
+	
+	return 0;
 }
 
 static void printHeader()
 {
-	printString(PRINT_HEADER);	
+	print(PRINT_HEADER);	
 }
 
 static void printNewLine()
 {
-	printString("\r\n");
+	print("\r\n");
 }

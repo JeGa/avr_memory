@@ -64,9 +64,9 @@ void doBufferTest()
 	
 	queue = getMessageQueue();
 	
-	msg1 = getMessage(10);
+	msg1 = getMessage(10, TX_MSG);
 	setMessageData(msg1, "Hello\n", 7);
-	msg2 = getMessage(20);
+	msg2 = getMessage(20, TX_MSG);
 	setMessageData(msg2, "World\n", 7);
 	
 	enqueue(queue, msg1);

@@ -32,3 +32,11 @@ void stopUsart();
 void sendMessageUsart(message *msg);
 
 message *receiveMessageUsart();
+
+/**
+ * Prints the given (null terminated) string to the serial console.
+ * The string data is copied.
+ */
+void print(char *string);
+
+void printChar(char character);

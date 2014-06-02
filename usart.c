@@ -19,7 +19,9 @@ static message *currentSendMessage;
  * until a newline).
  */
 #define MAX_RECEIVE_MSG_SIZE 20
-static message *currentReceiveMessage; // TODO
+static message *currentReceiveMessage;
+
+static message *stripMessage(message *msg);
 
 int initUsart()
 {
@@ -81,6 +83,38 @@ message *receiveMessageUsart()
 	return dequeue(rxQueue);
 }
 
+void printChar(char character)
+{
+	message *msgSendBack = getMessage(1, TX_MSG);
+	setMessageData(msgSendBack, &character, 1);
+	sendMessageUsart(msgSendBack);
+}
+
+void print(char *string)
+{
+	message *msg;
+	int stringSize = 0;
+	
+	// Count string size
+	while (string[stringSize])
+		++stringSize;
+	
+	if (stringSize == 0)
+		return;
+	
+	msg = getMessage(stringSize, TX_MSG);
+	setMessageData(msg, string, stringSize);
+	sendMessageUsart(msg);
+}
+
+static message *stripMessage(message *msg)
+{
+	message *ret = getMessage(msg->stackIndex, RX_MSG);
+	setMessageData(ret, getMessageData(msg), msg->stackIndex);
+	
+	return ret;
+}
+
 /**
  * Is called from the receive ISR.
  *
@@ -88,15 +122,12 @@ message *receiveMessageUsart()
  * If the MAX_RECEIVE_MSG_SIZE is reached or if a new line is recognized,
  * the message is put into the receive queue.
  */
-
-// TODO
 static void receive()
 {
-	message *msgSendBack;
 	char data;
 	
 	if (currentReceiveMessage == 0) {
-		currentReceiveMessage = getMessage(MAX_RECEIVE_MSG_SIZE);
+		currentReceiveMessage = getMessage(MAX_RECEIVE_MSG_SIZE, RX_MSG);
 		
 		if (currentReceiveMessage == 0)
 			return;
@@ -104,19 +135,31 @@ static void receive()
 	
 	data = USART.DATA;
 	
-	pushMessageData(currentReceiveMessage, data);
-	
-	if (isMessageStackFull(currentReceiveMessage)) {
-		enqueue(rxQueue, currentReceiveMessage);
-		currentReceiveMessage = 0;
-	} else if (data == '\r') { // New line
+	if (data == '\r') { // New line
+		// Copy message to a message with suitable size.
 		
+		message *finalMsg;
+		
+		pushMessageData(currentReceiveMessage, '\0');
+		
+		finalMsg = stripMessage(currentReceiveMessage);
+		enqueue(rxQueue, finalMsg);
+		
+		destroyMessage(currentReceiveMessage);
+		currentReceiveMessage = 0;
+		
+		// Send new line back
+		print("\r\n");
+	} else {
+		pushMessageData(currentReceiveMessage, data);
+		
+		printChar(data);
+				
+		if (isMessageStackFull(currentReceiveMessage)) {
+			enqueue(rxQueue, currentReceiveMessage);
+			currentReceiveMessage = 0;
+		}
 	}
-	
-	// TODO: Send copy back
-	msgSendBack = getMessage(1);
-	setMessageData(msgSendBack, &data, 1);
-	sendMessageUsart(msgSendBack);
 }
 
 /**
