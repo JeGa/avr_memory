@@ -1,5 +1,6 @@
 #include "usart.h"
 #include "jefax_xmega128.h"
+#include "usart_ascii.h"
 #include <avr/interrupt.h>
 
 static messageQueue *rxQueue;
@@ -18,101 +19,134 @@ static message *currentSendMessage;
  * the current receiving message (which is data
  * until a newline).
  */
-#define MAX_RECEIVE_MSG_SIZE 20
+#define MAX_RECEIVE_MSG_SIZE 50
 static message *currentReceiveMessage;
 
+// Prototypes
 static message *stripMessage(message *msg);
+static void processNewLine();
+static void processData(char data);
 
 int initUsart()
 {
-	rxQueue = getMessageQueue();
-	if (rxQueue == 0)
-		return 0;
-	
-	txQueue = getMessageQueue();
-	if (txQueue == 0)
-		return 0;
-		
-	currentSendMessage = 0;
-	currentReceiveMessage = 0;
-	
-	USART_PORT.OUTSET = PIN3_bm;
-	
-	USART_PORT.DIRSET = PIN3_bm; // Pin 3 as TX
-	USART_PORT.DIRCLR = PIN2_bm; // Pin 2 as RX
-	
-	// Frame format: Asynchronous, no parity, 1 Stop Bit, 8 Bit data
-	USART.CTRLC = USART_CHSIZE_8BIT_gc;
-	
-	// Baudrate
-	USART.BAUDCTRLB = 0;
-	USART.BAUDCTRLA = BSEL;
-	
-	// Enable rx and tx.
-	USART.CTRLB |= USART_RXEN_bm;
-	USART.CTRLB |= USART_TXEN_bm;
-	
-	// Enable receive IR
-	USART.CTRLA |= USART_RXCINTLVL_LO_gc;
-	
-	enableInterrupts();
-	
-	return 1;
+    rxQueue = getMessageQueue();
+    if (rxQueue == 0)
+        return 0;
+
+    txQueue = getMessageQueue();
+    if (txQueue == 0)
+        return 0;
+
+    currentSendMessage = 0;
+    currentReceiveMessage = 0;
+
+    USART_PORT.OUTSET = PIN3_bm;
+
+    USART_PORT.DIRSET = PIN3_bm; // Pin 3 as TX
+    USART_PORT.DIRCLR = PIN2_bm; // Pin 2 as RX
+
+    // Frame format: Asynchronous, no parity, 1 Stop Bit, 8 Bit data
+    USART.CTRLC = USART_CHSIZE_8BIT_gc;
+
+    // Baudrate
+    USART.BAUDCTRLB = 0;
+    USART.BAUDCTRLA = BSEL;
+
+    // Enable rx and tx.
+    USART.CTRLB |= USART_RXEN_bm;
+    USART.CTRLB |= USART_TXEN_bm;
+
+    // Enable receive IR
+    USART.CTRLA |= USART_RXCINTLVL_LO_gc;
+
+    enableInterrupts();
+
+    return 1;
 }
 
 void stopUsart()
 {
-	USART.CTRLA &= ~(USART_RXCINTLVL_LO_gc | USART_DREINTLVL_LO_gc);
-	
-	USART.CTRLB &= ~(USART_RXEN_bm | USART_TXEN_bm);
-	
-	destroyMessageQueue(rxQueue);
-	destroyMessageQueue(txQueue);
+    USART.CTRLA &= ~(USART_RXCINTLVL_LO_gc | USART_DREINTLVL_LO_gc);
+
+    USART.CTRLB &= ~(USART_RXEN_bm | USART_TXEN_bm);
+
+    destroyMessageQueue(rxQueue);
+    destroyMessageQueue(txQueue);
 }
 
 void sendMessageUsart(message *msg)
 {
-	enqueue(txQueue, msg);
-	
-	// Enable DRE IR
-	USART.CTRLA |= USART_DREINTLVL_LO_gc;
+    enqueue(txQueue, msg);
+
+    // Enable DRE IR
+    USART.CTRLA |= USART_DREINTLVL_LO_gc;
 }
 
 message *receiveMessageUsart()
 {
-	return dequeue(rxQueue);
+    return dequeue(rxQueue);
 }
 
 void printChar(char character)
 {
-	message *msgSendBack = getMessage(1, TX_MSG);
-	setMessageData(msgSendBack, &character, 1);
-	sendMessageUsart(msgSendBack);
+    message *msgSendBack = getMessage(1, TX_MSG);
+    setMessageData(msgSendBack, &character, 1);
+    sendMessageUsart(msgSendBack);
 }
 
 void print(char *string)
 {
-	message *msg;
-	int stringSize = 0;
-	
-	// Count string size
-	while (string[stringSize])
-		++stringSize;
-	
-	if (stringSize == 0)
-		return;
-	
-	msg = getMessage(stringSize, TX_MSG);
-	setMessageData(msg, string, stringSize);
-	sendMessageUsart(msg);
+    message *msg;
+    int stringSize = 0;
+
+    // Count string size
+    while (string[stringSize])
+        ++stringSize;
+
+    if (stringSize == 0)
+        return;
+
+    msg = getMessage(stringSize, TX_MSG);
+    setMessageData(msg, string, stringSize);
+    sendMessageUsart(msg);
 }
 
 static message *stripMessage(message *msg)
 {
-	message *ret = getMessage(msg->stackIndex, RX_MSG);
-	setMessageData(ret, getMessageData(msg), msg->stackIndex);
-	
-	return ret;
+    message *ret = getMessage(msg->stackIndex, RX_MSG);
+    setMessageData(ret, getMessageData(msg), msg->stackIndex);
+
+    return ret;
+}
+
+static void processNewLine()
+{
+    message *finalMsg;
+
+    pushMessageData(currentReceiveMessage, '\0');
+
+    // Copy message to a message with suitable size.
+    finalMsg = stripMessage(currentReceiveMessage);
+    enqueue(rxQueue, finalMsg);
+
+    destroyMessage(currentReceiveMessage);
+    currentReceiveMessage = 0;
+
+    // Send new line back
+    print("\r\n");
+}
+
+static void processData(char data)
+{
+    pushMessageData(currentReceiveMessage, data);
+
+    printChar(data);
+
+    if ((getMessageStackIndex(currentReceiveMessage) + 1) == MAX_RECEIVE_MSG_SIZE) {
+        pushMessageData(currentReceiveMessage, '\0');
+        enqueue(rxQueue, currentReceiveMessage);
+        currentReceiveMessage = 0;
+    }
 }
 
 /**
@@ -124,80 +158,64 @@ static message *stripMessage(message *msg)
  */
 static void receive()
 {
-	char data;
-	
-	if (currentReceiveMessage == 0) {
-		currentReceiveMessage = getMessage(MAX_RECEIVE_MSG_SIZE, RX_MSG);
-		
-		if (currentReceiveMessage == 0)
-			return;
-	}
-	
-	data = USART.DATA;
-	
-	if (data == '\r') { // New line
-		// Copy message to a message with suitable size.
-		
-		message *finalMsg;
-		
-		pushMessageData(currentReceiveMessage, '\0');
-		
-		finalMsg = stripMessage(currentReceiveMessage);
-		enqueue(rxQueue, finalMsg);
-		
-		destroyMessage(currentReceiveMessage);
-		currentReceiveMessage = 0;
-		
-		// Send new line back
-		print("\r\n");
-	} else {
-		pushMessageData(currentReceiveMessage, data);
-		
-		printChar(data);
-				
-		if (isMessageStackFull(currentReceiveMessage)) {
-			enqueue(rxQueue, currentReceiveMessage);
-			currentReceiveMessage = 0;
-		}
-	}
+    char data;
+    static char parseEscape = 0;
+
+    if (currentReceiveMessage == 0) {
+        currentReceiveMessage = getMessage(MAX_RECEIVE_MSG_SIZE, RX_MSG);
+
+        if (currentReceiveMessage == 0)
+            return;
+    }
+
+    data = USART.DATA;
+
+    if (data == '\e') {
+        parseEscape = 1;
+    } else if (data == CR) {
+        processNewLine();
+    } else if (data == DEL) {
+        print("\e[6n"); // Query cursor position
+    } else {
+        processData(data);
+    }
 }
 
 /**
  * Is called from the data register empty ISR.
- *
  * When the data is send, the message is destroyed.
  */
 static void send()
 {
-	// Disable DRE IR if buffer is empty.
-	if (isMessageQueueEmpty(txQueue) && currentSendMessage == 0)
-		USART.CTRLA = (USART.CTRLA & ~USART_DREINTLVL_gm) | USART_DREINTLVL_OFF_gc;
-	else {
-		char data;
-		
-		// Transmit msg from send buffer
-		
-		if (currentSendMessage == 0)
-			currentSendMessage = dequeue(txQueue);
-		
-		// Send one byte from current message
-		data = popMessageData(currentSendMessage);
-		USART.DATA = data;
-		
-		// If message has no data left destroy it
-		if (isMessageStackEmpty(currentSendMessage)) {
-			destroyMessage(currentSendMessage);	
-			currentSendMessage = 0;
-		}
-	}
+    // Disable DRE IR if buffer is empty.
+    if (isMessageQueueEmpty(txQueue) && currentSendMessage == 0)
+        USART.CTRLA = (USART.CTRLA & ~USART_DREINTLVL_gm) | USART_DREINTLVL_OFF_gc;
+    else {
+        char data;
+
+        // Transmit msg from send buffer
+
+        if (currentSendMessage == 0)
+            currentSendMessage = dequeue(txQueue);
+
+        // Send one byte from current message
+        data = popMessageData(currentSendMessage);
+        USART.DATA = data;
+
+        // If message has no data left destroy it
+        if (isMessageStackEmpty(currentSendMessage)) {
+            destroyMessage(currentSendMessage);
+            currentSendMessage = 0;
+        }
+    }
 }
 
 ISR(USARTC0_RXC_vect)
 {
-	receive();
+    receive();
 }
 
 ISR(USARTC0_DRE_vect)
 {
-	send();
+    send();
 }

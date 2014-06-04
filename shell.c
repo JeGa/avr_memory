@@ -1,61 +1,91 @@
 #include "shell.h"
 #include "usart.h"
-#include "usart_buffer.h"
+#include "usart_message.h"
+#include "memory.h"
 
+// TODO: Remove that
 #include <string.h>
+#include <stdlib.h>
 #include "jefax_xmega128.h"
 
-static void printString(char *string);
 static void printHeader();
 static void printNewLine();
-static int parseMessage(message *msg);
+static void parseMessage(message *msg);
+static message *waitForMessage();
 
 void shellTask()
 {
-	initLED();
-	initUsart();
-	
-	printNewLine();
-	
-	while (1) {
-		message *msg;
-		int running = 1;
-		
-		printHeader();
-		
-		while (running) {
-			msg = receiveMessageUsart();
-			running = parseMessage(msg);
-			destroyMessage(msg);
-		}
-	}
-	
-	stopUsart();
+    initLED();
+    initUsart();
+
+    printNewLine();
+
+    while (1) {
+        message *msg;
+
+        printHeader();
+
+        // Blocking busy loop
+        msg = waitForMessage();
+
+        // Got message from queue
+        parseMessage(msg);
+        destroyMessage(msg);
+    }
+
+    stopUsart();
 }
 
-// TODO
-static int parseMessage(message *msg)
+static void parseMessage(message *msg)
 {
-	if (msg == 0)
-		return 1;
-		
-	char *data = getMessageData(msg);
-	
-	if (strcmp("ledOn", data) == 0) {
-		setLED(0XFE);
-	} else if (strcmp("ledOff", data) == 0) {
-		setLED(0xFF);
-	}
-	
-	return 0;
+    char *data = getMessageData(msg);
+
+    if (strcmp("ledOn", data) == 0) {
+        setLED(0XFE);
+    } else if (strcmp("ledOff", data) == 0) {
+        setLED(0xFF);
+    } else if (strcmp("memDump", data) == 0) {
+        char out[80] = {0};
+
+        char heapStart[10] = {0};
+        char nextFreeMemory[10] = {0};
+        char heapAllocated[10] = {0};
+        char freeListEntries[10] = {0};
+
+        memoryInfo info = dumpMemory();
+
+        itoa(info.heapAllocated, heapAllocated, 10);
+        itoa(info.freeListEntries, freeListEntries, 10);
+
+        strcat(out, "Allocated: ");
+        strcat(out, heapAllocated);
+        strcat(out, " FreeListEntries: ");
+        strcat(out, freeListEntries);
+
+        print(out);
+        printNewLine();
+    }
+}
+
+static message *waitForMessage()
+{
+    message *msg;
+
+    while (1) {
+        msg = receiveMessageUsart();
+        if (msg != 0)
+            break;
+    }
+
+    return msg;
 }
 
 static void printHeader()
 {
-	print(PRINT_HEADER);	
+    print(PRINT_HEADER);
 }
 
 static void printNewLine()
 {
-	print("\r\n");
+    print("\r\n");
 }

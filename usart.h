@@ -11,7 +11,8 @@
 
 #include <avr/io.h>
 #include <stdint.h>
-#include "usart_buffer.h"
+#include "usart_message.h"
+#include "usart_queue.h"
 
 #define USART USARTC0
 #define USART_PORT PORTC

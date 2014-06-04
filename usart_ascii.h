@@ -1,0 +1,6 @@
+#pragma once
+
+#define LF 0x0A
+#define CR 0x0D
+#define DEL 0x7F
+#define ESC 0x1B
