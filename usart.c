@@ -21,11 +21,14 @@ static message *currentSendMessage;
  */
 #define MAX_RECEIVE_MSG_SIZE 50
 static message *currentReceiveMessage;
+static message *escapeReceiveMessage;
+char del = 0;
 
 // Prototypes
 static message *stripMessage(message *msg);
 static void processNewLine();
 static void processData(char data);
+static int processEscapeData(char *data);
 
 int initUsart()
 {
@@ -146,7 +149,53 @@ static void processData(char data)
         pushMessageData(currentReceiveMessage, '\0');
         enqueue(rxQueue, currentReceiveMessage);
         currentReceiveMessage = 0;
+        print("\r\n");
     }
+}
+
+static int processEscapeData(char *data)
+{
+    pushMessageData(escapeReceiveMessage, data);
+
+    // When a character is received, the escape sequence is received completely.
+    if ((data >= CHAR_BIG_START && data <= CHAR_BIG_END) ||
+            (data >= CHAR_SMALL_START && data <= CHAR_SMALL_END)) {
+
+        if (data == 'R') { // Received cursor position: [{ROW};{COLUMN}R
+            if (del) {
+                // Check cursor position
+                uint32_t posRow = 0, posColumn = 0;
+                int stackIndex, i = 1, rowOrColumn = 1;
+                int rowChars = 0, columnChars = 0;
+
+                stackIndex = getMessageStackIndex(escapeReceiveMessage);
+                char *escapeData = getMessageData(escapeReceiveMessage);
+
+                while (i < (stackIndex - 1)) {
+                    if (escapeData[i] == ';') {
+                        rowOrColumn = 0; // Switch from row to column
+                    } else if (rowOrColumn) {
+                        ++rowChars;
+                    } else if (!rowOrColumn) {
+                        ++columnChars;
+                    }
+
+                    ++i;
+                }
+
+                // TODO: This is not so nice ...
+                if (!(columnChars == 1 && escapeData[rowChars + 2] <= 0x38))
+                    printChar(DEL);
+
+                del = 0;
+            }
+        }
+
+        destroyMessage(escapeReceiveMessage);
+        return 1;
+    }
+
+    return 0;
 }
 
 /**
@@ -170,12 +219,17 @@ static void receive()
 
     data = USART.DATA;
 
-    if (data == '\e') {
+    if (data == ESC) {
         parseEscape = 1;
+        escapeReceiveMessage = getMessage(15, RX_MSG);
     } else if (data == CR) {
         processNewLine();
     } else if (data == DEL) {
-        print("\e[6n"); // Query cursor position
+        print(QUERY_CURSOR_POS); // Query cursor position
+        del = 1;
+    } else if (parseEscape) {
+        if (processEscapeData(data))
+            parseEscape = 0;
     } else {
         processData(data);
     }
