@@ -1,6 +1,6 @@
 #include "usart.h"
-#include "jefax_xmega128.h"
 #include "usart_ascii.h"
+#include "shell.h"
 #include <avr/interrupt.h>
 
 static messageQueue *rxQueue;
@@ -28,7 +28,7 @@ char del = 0;
 static message *stripMessage(message *msg);
 static void processNewLine();
 static void processData(char data);
-static int processEscapeData(char *data);
+static int processEscapeData(char data);
 
 int initUsart()
 {
@@ -61,8 +61,6 @@ int initUsart()
 
     // Enable receive IR
     USART.CTRLA |= USART_RXCINTLVL_LO_gc;
-
-    enableInterrupts();
 
     return 1;
 }
@@ -153,7 +151,7 @@ static void processData(char data)
     }
 }
 
-static int processEscapeData(char *data)
+static int processEscapeData(char data)
 {
     pushMessageData(escapeReceiveMessage, data);
 
@@ -162,9 +160,8 @@ static int processEscapeData(char *data)
             (data >= CHAR_SMALL_START && data <= CHAR_SMALL_END)) {
 
         if (data == 'R') { // Received cursor position: [{ROW};{COLUMN}R
-            if (del) {
+            if (del) { // Check if delete is allowed
                 // Check cursor position
-                uint32_t posRow = 0, posColumn = 0;
                 int stackIndex, i = 1, rowOrColumn = 1;
                 int rowChars = 0, columnChars = 0;
 
@@ -179,19 +176,17 @@ static int processEscapeData(char *data)
                     } else if (!rowOrColumn) {
                         ++columnChars;
                     }
-
                     ++i;
                 }
 
                 // TODO: This is not so nice ...
-                if (!(columnChars == 1 && escapeData[rowChars + 2] <= 0x38))
+                if (!(columnChars == 1 && escapeData[rowChars + 2] <= HEADER_LIMIT))
                     printChar(DEL);
 
                 del = 0;
             }
         }
 
-        destroyMessage(escapeReceiveMessage);
         return 1;
     }
 
@@ -222,14 +217,16 @@ static void receive()
     if (data == ESC) {
         parseEscape = 1;
         escapeReceiveMessage = getMessage(15, RX_MSG);
+    } else if (parseEscape) {
+        if (processEscapeData(data)) { // If finished receiving escape sequence
+            destroyMessage(escapeReceiveMessage);
+            parseEscape = 0;
+        }
     } else if (data == CR) {
         processNewLine();
     } else if (data == DEL) {
         print(QUERY_CURSOR_POS); // Query cursor position
         del = 1;
-    } else if (parseEscape) {
-        if (processEscapeData(data))
-            parseEscape = 0;
     } else {
         processData(data);
     }

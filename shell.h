@@ -8,6 +8,7 @@
 #pragma once
 
 #define PRINT_HEADER "jefax> "
+#define HEADER_LIMIT 0x38 // ASCII: Column '8'
 
 /**
  * This task can be scheduled.

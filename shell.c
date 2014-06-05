@@ -16,7 +16,6 @@ static message *waitForMessage();
 void shellTask()
 {
     initLED();
-    initUsart();
 
     printNewLine();
 
@@ -56,11 +55,17 @@ static void parseMessage(message *msg)
 
         itoa(info.heapAllocated, heapAllocated, 10);
         itoa(info.freeListEntries, freeListEntries, 10);
+        itoa((int) info.heapStart, heapStart, 10);
+        itoa((int) info.nextFreeMemory, nextFreeMemory, 10);
 
         strcat(out, "Allocated: ");
         strcat(out, heapAllocated);
         strcat(out, " FreeListEntries: ");
         strcat(out, freeListEntries);
+        strcat(out, " HeapStart: ");
+        strcat(out, heapStart);
+        strcat(out, " NextFreeMemory: ");
+        strcat(out, nextFreeMemory);
 
         print(out);
         printNewLine();

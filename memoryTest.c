@@ -2,6 +2,7 @@
 #include "usart_message.h"
 #include "usart.h"
 #include "shell.h"
+#include "jefax_xmega128.h"
 
 #include <util/delay.h>
 
@@ -80,6 +81,8 @@ void doBufferTest()
 int main(void)
 {
     init32MHzClock();
+    initUsart();
+    enableInterrupts(); // Enable IRs after initUsart!
 
     shellTask();
 }

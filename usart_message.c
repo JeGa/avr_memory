@@ -1,6 +1,9 @@
 #include "usart_message.h"
 #include "memory.h"
 
+// TODO: Write own memcpy
+#include <string.h> // memcpy
+
 message *getMessage(int dataSize, MSG_TYPE type)
 {
     message *msg;
